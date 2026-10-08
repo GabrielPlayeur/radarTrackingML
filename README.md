@@ -36,7 +36,7 @@ Notebook : [notebooks/A_ekf.ipynb](notebooks/A_ekf.ipynb).
 | RMSE du filtre vs RMSE des mesures (CV, Q et R corrects) | 13 m contre 42 m |
 | Jacobienne analytique de h vs différences finies | accord à 1e-6 (rel.) |
 | Cible traversant θ = ±π | innovation max 0,03 rad avec normalisation (6,28 rad sans) |
-| NEES moyen, 100 Monte-Carlo, CV, Q correct (EKF et KF) | 3,96 pour 4 attendu, IC χ² 95 % : [3,46 ; 4,57] |
+| NEES moyen, 100 Monte-Carlo, CV, Q correct | EKF : 3,96 pour 4 attendu, IC χ² 95 % : [3,46 ; 4,57] ; le KF est aussi dans l'IC (test) |
 | NIS moyen, même scénario | 1,95 pour 2 attendu, IC : [1,63 ; 2,41] |
 
 **Figure 1 — l'EKF décroche en virage avec un modèle CV.** Un Q 100 fois plus grand l'en empêche, mais bruite la ligne droite.
