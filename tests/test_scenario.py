@@ -105,3 +105,13 @@ def test_supports_5_to_20_ships(n_ships):
     """Le générateur produit bien 5 ou 20 navires dans la zone."""
     scenario = generate_scenario(dataclasses.replace(PARAMS, n_ships=n_ships, n_steps=60))
     assert scenario.truth.shape[0] == n_ships
+
+
+@pytest.mark.parametrize("n_steps", [30, 40, 60])
+def test_short_scenarios_have_consistent_trajectory_lengths(n_steps):
+    """Régression : un virage plus long que le scénario ne doit pas produire de trajectoires de longueurs différentes."""
+    for seed in range(20):
+        params = dataclasses.replace(PARAMS, n_steps=n_steps, turn_fraction=1.0, seed=seed)
+        scenario = generate_scenario(params)
+        assert scenario.truth.shape == (params.n_ships, n_steps, 4)
+        assert scenario.in_turn.shape == (params.n_ships, n_steps)

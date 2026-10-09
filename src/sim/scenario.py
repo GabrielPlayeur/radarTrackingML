@@ -61,13 +61,15 @@ def _random_ship(params: ScenarioParams, rng: np.random.Generator):
         turns = rng.random() < params.turn_fraction
         if turns:
             duration = int(rng.integers(params.turn_steps_range[0], params.turn_steps_range[1] + 1))
-            start = int(rng.integers(10, max(11, n - duration - 10)))
+            duration = min(duration, max(1, n - 15))  # le virage doit tenir dans le scénario
+            start = int(rng.integers(5, n - duration - 4))  # ≥ 5 pas de CV avant et après
             omega = rng.choice([-1, 1]) * rng.uniform(*params.turn_rate_range)
             segments = [(start, 0.0), (duration, omega), (n - start - duration, 0.0)]
         else:
             start = duration = 0
             segments = [(n, 0.0)]
         states = maneuver_trajectory(x0, segments, traj_params, rng)
+        assert len(states) == params.n_steps  # garde : tous les navires ont la même durée
         in_zone = np.all(np.abs(states[:, :2]) <= params.half_size)
         far_enough = np.all(np.hypot(states[:, 0], states[:, 1]) >= params.min_range)
         if in_zone and far_enough:
