@@ -70,7 +70,9 @@ def test_turn_mask_matches_heading_changes():
     assert turning.any() and (~turning).any()
     min_swing = PARAMS.turn_rate_range[0] * PARAMS.turn_steps_range[0] * PARAMS.dt  # ω_min·durée_min
     assert swing[turning].min() > 0.9 * min_swing
-    assert swing[~turning].max() < 0.2  # seul le bruit d'accélération fait dériver le cap
+    # sans virage, seul le bruit d'accélération fait dériver le cap (marche aléatoire de la vitesse,
+    # ≈ σ_a·dt·√n / v ≈ 0,3 rad pour un navire lent) : bien moins que le virage voulu
+    assert swing[~turning].max() < swing[turning].min()
 
 
 def test_same_seed_same_scenario_different_seed_differs():
