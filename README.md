@@ -16,7 +16,7 @@ apporte, ou non, par rapport à un EKF et à un IMM.
 |---|---|---|
 | S0 | Bases radar + Kalman | en cours |
 | A | Kalman / EKF, une cible | terminé |
-| B | Chaîne signal : chirp → distance-Doppler → CFAR | en cours |
+| B | Chaîne signal : chirp → distance-Doppler → CFAR | terminé |
 | C | Multi-cibles : GNN + clutter + IMM + OSPA | à faire |
 | D | Une expérience IA (gain appris ou R adaptatif) | à faire |
 
@@ -50,6 +50,34 @@ Notebook : [notebooks/A_ekf.ipynb](notebooks/A_ekf.ipynb).
 **Figure 3 — Q faux.** Q correct : 21 m en ligne droite mais 130 m en virage ; Q × 100 : 30 m en virage mais 29 m en ligne droite. Un Q fixe est un compromis, ce qui motive l'IMM (jalon C) et les approches apprises (jalon D).
 
 ![RMSE en fonction du facteur d'erreur sur Q](figures/A_rmse_vs_q.png)
+
+## Jalon B — Chaîne signal : chirp → distance-Doppler → CFAR
+
+Un radar en simulation est un tableau complexe (N impulsions × n échantillons) en bande de base :
+`src/radar/waveform.py` (chirp, `RadarParams`), `simulate.py` (CPI avec retard analytique et bruit au SNR voulu),
+`processing.py` (compression d'impulsion, FFT Doppler fenêtrée, CA-CFAR 2D).
+Notebook : [notebooks/B_range_doppler.ipynb](notebooks/B_range_doppler.ipynb).
+
+**Validations (tests dans `tests/`)**
+
+| Vérification | Théorie | Mesuré |
+|---|---|---|
+| Largeur à −3 dB de l'autocorrélation du chirp | 0,886 / B | 0,884 / B (10 MHz), 0,885 / B (20 MHz) |
+| Position du pic (cible à 3 km, 5 m/s) | case distance et Doppler attendues | distance à 2,5 m (pas de 7,5 m), vitesse à 0,02 m/s |
+| Gain de compression d'impulsion | T·fs = 200 (23 dB) | 199,8 |
+| Gain Doppler, fenêtre de Hann | (Σw)² / Σw² ≈ 42 | 41,5 (−1,3 %) |
+| Pfa du CA-CFAR sur bruit seul | visée 10⁻³ / 10⁻⁴ | 1,35 × / 1,57 × la visée (critère : facteur 2) |
+| Courbe Pd(SNR), Pfa = 10⁻⁴, 200 tirages | seuil de Pd = 0,5 à −29,7 dB | −29,1 dB (+0,6 dB) ; Pd = 0,9 : +0,8 dB |
+
+Le gain de compression vaut T·fs et non B·T, parce que fs = 2B. La Pfa du CFAR est au-dessus de la visée : les cases voisines sont corrélées.
+
+**Figure 4 — carte distance-Doppler (dB) et détections CA-CFAR.** Deux cibles invisibles dans le signal brut (−15 dB par échantillon) ressortent à 24 et 17 dB ; les cercles isolés sont des fausses alarmes attendues.
+
+![Carte distance-Doppler et détections CFAR](figures/B_range_doppler.png)
+
+**Figure 5 — Pd en fonction du SNR**, avec intervalle de Clopper-Pearson à 95 % et courbe théorique (cible sur la case, seuil du CA-CFAR).
+
+![Pd en fonction du SNR](figures/B_pd_vs_snr.png)
 
 ## Structure
 
