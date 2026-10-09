@@ -40,15 +40,23 @@ class KalmanFilter:
         """Innovation y = z − H·x⁻ : la part de la mesure que la prédiction n'explique pas."""
         return z - self.H @ self.x
 
+    def innovation_and_covariance(self, z: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Innovation y et covariance S qu'aurait une mise à jour avec z, sans modifier le filtre.
+
+        y = z − h(x⁻) et S = H·P⁻·Hᵀ + R. Sert au gating : la distance de Mahalanobis yᵀ·S⁻¹·y
+        mesure à quel point z est plausible compte tenu de la prédiction.
+        """
+        H = self._measurement_matrix()
+        return self._innovation(np.asarray(z, dtype=float)), H @ self.P @ H.T + self.R
+
     def update(self, z: np.ndarray) -> None:
         """Mise à jour : on corrige la prédiction par l'innovation, pondérée par le gain K.
 
         y = z − H·x⁻,  S = H·P⁻·Hᵀ + R,  K = P⁻·Hᵀ·S⁻¹,  x = x⁻ + K·y,
         P = (I − K·H)·P⁻·(I − K·H)ᵀ + K·R·Kᵀ (forme de Joseph, qui garde P symétrique définie positive).
         """
-        y = self._innovation(np.asarray(z, dtype=float))
+        y, S = self.innovation_and_covariance(z)
         H = self._measurement_matrix()
-        S = H @ self.P @ H.T + self.R
         K = np.linalg.solve(S, H @ self.P).T  # P·Hᵀ·S⁻¹ (S et P symétriques)
         self.x = self.x + K @ y
         I_KH = np.eye(len(self.x)) - K @ H
