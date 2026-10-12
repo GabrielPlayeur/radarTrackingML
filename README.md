@@ -17,7 +17,7 @@ apporte, ou non, par rapport à un EKF et à un IMM.
 | S0 | Bases radar + Kalman | en cours |
 | A | Kalman / EKF, une cible | terminé |
 | B | Chaîne signal : chirp → distance-Doppler → CFAR | terminé |
-| C | Multi-cibles : GNN + clutter + IMM + OSPA | à faire |
+| C | Multi-cibles : GNN + clutter + IMM + OSPA | terminé |
 | D | Une expérience IA (gain appris ou R adaptatif) | à faire |
 
 Les résultats et figures seront ajoutés ici (figures dans `figures/`) à la fin de chaque jalon.
@@ -78,6 +78,50 @@ Le gain de compression vaut T·fs et non B·T, parce que fs = 2B. La Pfa du CFAR
 **Figure 5 — Pd en fonction du SNR**, avec intervalle de Clopper-Pearson à 95 % et courbe théorique (cible sur la case, seuil du CA-CFAR).
 
 ![Pd en fonction du SNR](figures/B_pd_vs_snr.png)
+
+## Jalon C — Multi-cibles maritime : GNN + clutter + IMM + OSPA
+
+Le pistage travaille sur des détections (r, θ), pas sur le signal. Scénarios de 10 navires (CV / virages) dans une zone de
+20 km × 20 km, Pd = 0,9, ~10 fausses alarmes de Poisson par balayage (`src/sim/scenario.py`, sérialisables et rejouables).
+Chaîne : gating de Mahalanobis + association hongroise (`gnn.py`), confirmation M/N 3 sur 4 et suppression après 5 ratés
+(`track_manager.py`), IMM (`imm.py`), OSPA et statistiques de pistes (`src/metrics/`).
+Notebook : [notebooks/C_multitarget.ipynb](notebooks/C_multitarget.ipynb).
+
+**Validations (tests dans `tests/`)**
+
+| Vérification | Résultat |
+|---|---|
+| IMM vs `filterpy.kalman.IMMEstimator` (x, P, probabilités de modèle, 1 cible) | identiques à 1e-8 |
+| Association hongroise vs force brute (200 petits problèmes) | optimum identique |
+| OSPA : deux ensembles identiques / un vide contre un non vide | 0 / c (exactement) |
+| Pd empirique des scénarios, fausses alarmes par balayage | 0,9 ± 0,02 ; moyenne = variance = λ (Poisson) |
+| Une cible, virage, 40 tirages : erreur de l'IMM à 3 modèles / de l'EKF-CV | < 0,5 (mesuré ≈ 0,15) |
+| NEES moyen en virage, IMM / EKF-CV | 4,0 (dans l'IC χ²) / ≈ 520 |
+
+**Tableau — scénario « manœuvres »** (tous les navires virent), 50 Monte-Carlo, moyenne ± IC de Student à 95 % ; OSPA avec c = 300 m, p = 2.
+
+| pisteur | OSPA moyen [m] | RMSE [m] | RMSE en virage [m] | pertes de piste | changements d'identité | fausses pistes |
+|---|---|---|---|---|---|---|
+| EKF-CV | 57.7 ± 1.8 | 45.3 ± 1.7 | 61.7 ± 2.4 | 0.30 ± 0.14 | 11.1 ± 0.7 | 0.56 ± 0.19 |
+| IMM (CV + CT) | 49.0 ± 2.0 | 38.8 ± 1.7 | 48.1 ± 2.5 | 0.14 ± 0.10 | 5.6 ± 0.7 | 0.62 ± 0.19 |
+| IMM (CV + CT±) | 38.8 ± 1.5 | 31.4 ± 0.9 | 32.9 ± 1.4 | 0.06 ± 0.07 | 1.3 ± 0.6 | 0.50 ± 0.18 |
+
+Témoin « ligne droite » (aucun virage) : l'IMM est légèrement moins bon que l'EKF-CV (RMSE 29,4 ± 0,7 m contre 27,7 ± 0,7 m).
+Temps par mise à jour (médiane sur 8 scénarios) : EKF-CV 455 µs, IMM à 2 modèles 1 304 µs, IMM à 3 modèles 1 708 µs.
+
+Le modèle CT d'un IMM a un taux de virage signé : l'IMM « CV + CT » à 2 modèles ne gagne que dans le sens de son CT (figure 8). L'IMM à 3 modèles (CV, CT+, CT−) divise l'erreur en virage par ≈ 1,9 dans les deux sens.
+
+**Figure 6 — un scénario et les pistes de l'IMM.**
+
+![Scénario multi-cibles et pistes](figures/C_scenario.png)
+
+**Figure 7 — OSPA au cours du temps** (50 Monte-Carlo, IC à 95 %).
+
+![OSPA au cours du temps](figures/C_ospa.png)
+
+**Figure 8 — erreur en virage selon le sens du virage.**
+
+![Erreur en virage par sens de virage](figures/C_virage_par_sens.png)
 
 ## Structure
 
