@@ -42,6 +42,7 @@ class Scenario:
     params: ScenarioParams
     truth: np.ndarray  # (n_ships, n_steps, 4) états [x, y, vx, vy]
     in_turn: np.ndarray  # (n_ships, n_steps) booléen : le navire est en virage à cet instant
+    turn_rate: np.ndarray  # (n_ships,) taux de virage signé [rad/s] (> 0 = sens trigonométrique), 0 si CV
     detections: list  # n_steps tableaux (m_k, 2) de détections polaires [r, θ]
     sources: list  # n_steps tableaux (m_k,) : indice du navire détecté, −1 pour une fausse alarme
 
@@ -51,6 +52,7 @@ def _random_ship(params: ScenarioParams, rng: np.random.Generator):
 
     Tirage par rejet : position uniforme, cap et vitesse aléatoires, virage éventuel de taux ±ω ;
     on recommence tant que la trajectoire sort de la zone ou passe trop près de l'origine.
+    Retourne (états, masque de virage, taux de virage signé).
     """
     traj_params = TrajectoryParams(dt=params.dt, sigma_a=params.sigma_a)
     n = params.n_steps - 1  # nombre de transitions
@@ -59,6 +61,7 @@ def _random_ship(params: ScenarioParams, rng: np.random.Generator):
         speed, heading = rng.uniform(*params.speed_range), rng.uniform(-np.pi, np.pi)
         x0 = np.array([pos[0], pos[1], speed * np.cos(heading), speed * np.sin(heading)])
         turns = rng.random() < params.turn_fraction
+        omega = 0.0
         if turns:
             duration = int(rng.integers(params.turn_steps_range[0], params.turn_steps_range[1] + 1))
             duration = min(duration, max(1, n - 15))  # le virage doit tenir dans le scénario
@@ -75,7 +78,7 @@ def _random_ship(params: ScenarioParams, rng: np.random.Generator):
         if in_zone and far_enough:
             mask = np.zeros(params.n_steps, dtype=bool)
             mask[start + 1 : start + duration + 1] = True  # transitions effectuées avec ω ≠ 0
-            return states, mask
+            return states, mask, omega
 
 
 def generate_scenario(params: ScenarioParams) -> Scenario:
@@ -87,8 +90,9 @@ def generate_scenario(params: ScenarioParams) -> Scenario:
     """
     rng = np.random.default_rng(params.seed)
     ships = [_random_ship(params, rng) for _ in range(params.n_ships)]
-    truth = np.array([s for s, _ in ships])
-    in_turn = np.array([m for _, m in ships])
+    truth = np.array([s for s, _, _ in ships])
+    in_turn = np.array([m for _, m, _ in ships])
+    turn_rate = np.array([w for _, _, w in ships])
 
     detections, sources = [], []
     for k in range(params.n_steps):
@@ -102,7 +106,7 @@ def generate_scenario(params: ScenarioParams) -> Scenario:
         order = rng.permutation(len(z))
         detections.append(z[order])
         sources.append(src[order])
-    return Scenario(params, truth, in_turn, detections, sources)
+    return Scenario(params, truth, in_turn, turn_rate, detections, sources)
 
 
 def save_scenario(scenario: Scenario, path) -> None:
@@ -113,6 +117,7 @@ def save_scenario(scenario: Scenario, path) -> None:
         params=json.dumps(asdict(scenario.params)),
         truth=scenario.truth,
         in_turn=scenario.in_turn,
+        turn_rate=scenario.turn_rate,
         counts=counts,
         detections=np.vstack(scenario.detections),
         sources=np.concatenate(scenario.sources),
@@ -132,6 +137,7 @@ def load_scenario(path) -> Scenario:
             params=params,
             truth=data["truth"],
             in_turn=data["in_turn"],
+            turn_rate=data["turn_rate"],
             detections=np.split(data["detections"], cuts),
             sources=np.split(data["sources"], cuts),
         )

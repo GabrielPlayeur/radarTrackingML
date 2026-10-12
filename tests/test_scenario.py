@@ -93,6 +93,7 @@ def test_save_and_load_round_trip(tmp_path):
     assert loaded.params == SCENARIO.params
     np.testing.assert_array_equal(loaded.truth, SCENARIO.truth)
     np.testing.assert_array_equal(loaded.in_turn, SCENARIO.in_turn)
+    np.testing.assert_array_equal(loaded.turn_rate, SCENARIO.turn_rate)
     assert len(loaded.detections) == len(SCENARIO.detections)
     for a, b in zip(loaded.detections, SCENARIO.detections):
         np.testing.assert_array_equal(a, b)
@@ -115,3 +116,17 @@ def test_short_scenarios_have_consistent_trajectory_lengths(n_steps):
         scenario = generate_scenario(params)
         assert scenario.truth.shape == (params.n_ships, n_steps, 4)
         assert scenario.in_turn.shape == (params.n_ships, n_steps)
+
+
+def test_signed_turn_rate_matches_mask_and_heading_direction():
+    """turn_rate est non nul exactement pour les navires qui virent, et son signe est celui de la rotation du cap."""
+    turning = SCENARIO.in_turn.any(axis=1)
+    np.testing.assert_array_equal(SCENARIO.turn_rate != 0, turning)
+    lo, hi = PARAMS.turn_rate_range
+    assert np.all((np.abs(SCENARIO.turn_rate[turning]) >= lo) & (np.abs(SCENARIO.turn_rate[turning]) <= hi))
+    assert set(np.sign(SCENARIO.turn_rate[turning])) == {-1.0, 1.0}  # les deux sens apparaissent
+    heading = np.unwrap(np.arctan2(SCENARIO.truth[..., 3], SCENARIO.truth[..., 2]), axis=1)
+    for ship in np.flatnonzero(turning):
+        steps = np.flatnonzero(SCENARIO.in_turn[ship])
+        rotation = heading[ship, steps[-1]] - heading[ship, steps[0] - 1]
+        assert np.sign(rotation) == np.sign(SCENARIO.turn_rate[ship])
