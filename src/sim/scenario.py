@@ -47,7 +47,7 @@ class Scenario:
     sources: list  # n_steps tableaux (m_k,) : indice du navire détecté, −1 pour une fausse alarme
 
 
-def _random_ship(params: ScenarioParams, rng: np.random.Generator):
+def random_ship(params: ScenarioParams, rng: np.random.Generator):
     """Tire un navire (trajectoire, masque de virage) qui reste dans la zone et loin du radar.
 
     Tirage par rejet : position uniforme, cap et vitesse aléatoires, virage éventuel de taux ±ω ;
@@ -89,7 +89,7 @@ def generate_scenario(params: ScenarioParams) -> Scenario:
     Les détections d'un balayage sont mélangées pour que leur ordre ne révèle rien.
     """
     rng = np.random.default_rng(params.seed)
-    ships = [_random_ship(params, rng) for _ in range(params.n_ships)]
+    ships = [random_ship(params, rng) for _ in range(params.n_ships)]
     truth = np.array([s for s, _, _ in ships])
     in_turn = np.array([m for _, m, _ in ships])
     turn_rate = np.array([w for _, _, w in ships])
