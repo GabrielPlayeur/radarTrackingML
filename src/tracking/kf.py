@@ -1,6 +1,6 @@
 """Filtre de Kalman linéaire écrit à la main (prédiction / mise à jour), sans bibliothèque.
 
-Modèle : x_k = F·x_{k−1} + w, w ~ N(0, Q)   et   z_k = H·x_k + v, v ~ N(0, R).
+Modèle : x_k = F·x_{k-1} + w, w ~ N(0, Q)   et   z_k = H·x_k + v, v ~ N(0, R).
 Le filtre de Kalman étendu (ekf.py) hérite de cette classe et ne change que la mesure.
 """
 
@@ -21,7 +21,7 @@ class KalmanFilter:
         self.R = np.asarray(R, dtype=float)
         self.x = np.asarray(x0, dtype=float).copy()
         self.P = np.asarray(P0, dtype=float).copy()
-        self.innovation = None  # y = z − h(x⁻) de la dernière mise à jour
+        self.innovation = None  # y = z - h(x⁻) de la dernière mise à jour
         self.S = None  # covariance de l'innovation de la dernière mise à jour
 
     def predict(self) -> None:
@@ -37,13 +37,13 @@ class KalmanFilter:
         return self.H
 
     def _innovation(self, z: np.ndarray) -> np.ndarray:
-        """Innovation y = z − H·x⁻ : la part de la mesure que la prédiction n'explique pas."""
+        """Innovation y = z - H·x⁻ : la part de la mesure que la prédiction n'explique pas."""
         return z - self.H @ self.x
 
     def innovation_and_covariance(self, z: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Innovation y et covariance S qu'aurait une mise à jour avec z, sans modifier le filtre.
 
-        y = z − h(x⁻) et S = H·P⁻·Hᵀ + R. Sert au gating : la distance de Mahalanobis yᵀ·S⁻¹·y
+        y = z - h(x⁻) et S = H·P⁻·Hᵀ + R. Sert au gating : la distance de Mahalanobis yᵀ·S⁻¹·y
         mesure à quel point z est plausible compte tenu de la prédiction.
         """
         H = self._measurement_matrix()
@@ -52,8 +52,8 @@ class KalmanFilter:
     def update(self, z: np.ndarray) -> None:
         """Mise à jour : on corrige la prédiction par l'innovation, pondérée par le gain K.
 
-        y = z − H·x⁻,  S = H·P⁻·Hᵀ + R,  K = P⁻·Hᵀ·S⁻¹,  x = x⁻ + K·y,
-        P = (I − K·H)·P⁻·(I − K·H)ᵀ + K·R·Kᵀ (forme de Joseph, qui garde P symétrique définie positive).
+        y = z - H·x⁻,  S = H·P⁻·Hᵀ + R,  K = P⁻·Hᵀ·S⁻¹,  x = x⁻ + K·y,
+        P = (I - K·H)·P⁻·(I - K·H)ᵀ + K·R·Kᵀ (forme de Joseph, qui garde P symétrique définie positive).
         """
         y, S = self.innovation_and_covariance(z)
         H = self._measurement_matrix()
@@ -75,7 +75,7 @@ class FilterResult:
 
 
 def run_filter(kf: KalmanFilter, measurements: np.ndarray) -> FilterResult:
-    """Fait tourner le filtre : pour k = 1 … n−1, predict() puis update(z_k).
+    """Fait tourner le filtre : pour k = 1 … n-1, predict() puis update(z_k).
 
     L'instant 0 est l'a priori (x0, P0) : measurements[0] n'est pas utilisée, ce qui aligne les
     indices de l'estimation et de la vérité terrain.

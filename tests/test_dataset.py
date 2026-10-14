@@ -96,7 +96,7 @@ def test_strong_turn_set_really_turns_faster():
 
 
 def test_noisy_set_has_twice_the_noise_and_long_set_is_longer():
-    """Bruit doublé (σ_r ×2) et séquences 4 fois plus longues, avec la même vérité statistique."""
+    """Bruit doublé (σ_r ×2) et séquences 4 fois plus longues (vitesses biaisées, voir stress_params)."""
     small = dataclasses.replace(PARAMS, n_test=60)
     noisy = make_stress_test_set(small, "noisy")
     dr = noisy.z[..., 0] - np.hypot(noisy.truth[..., 0], noisy.truth[..., 1])

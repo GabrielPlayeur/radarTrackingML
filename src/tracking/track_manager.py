@@ -63,8 +63,10 @@ class TrackManager:
     def step(self, detections: np.ndarray) -> None:
         """Traite un balayage : prédiction, association GNN, mise à jour, confirmation, suppression, création.
 
-        Confirmation M/N : une piste provisoire devient confirmée si elle a ≥ M détections dans les N
-        derniers balayages ; elle est supprimée dès que M devient inatteignable dans la fenêtre.
+        Confirmation M/N : une piste provisoire est confirmée dès qu'elle a ≥ M détections, et supprimée dès
+        que M détections ne sont plus atteignables dans ses N premiers balayages (création comprise). Elle est
+        donc tranchée au plus tard à son N-ième balayage : la règle porte sur les N premiers balayages, sans
+        fenêtre glissante.
         """
         p = self.params
         for track in self.tracks:

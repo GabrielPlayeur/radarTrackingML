@@ -84,6 +84,14 @@ def stress_params(params: DatasetParams, kind: str) -> DatasetParams:
     - strong_turns : tous les navires virent, 3 à 4 fois plus vite qu'à l'entraînement (0,06–0,10 rad/s) ;
     - noisy : bruit de mesure doublé (les filtres gardent leur R nominal) ;
     - long : séquences 4 fois plus longues que celles de l'entraînement.
+
+    Biais de « long » : la zone est la même, et le tirage par rejet de `random_ship` (le navire doit y rester toute
+    la séquence) écarte surtout les navires rapides, qui parcourent 4 fois plus de distance. Mesuré sur 300
+    trajectoires : vitesse initiale moyenne 8,9 m/s au lieu de 10,0, part au-dessus de 12 m/s divisée par 2, distance
+    moyenne au radar 6,4 km au lieu de 7,2. Agrandir la zone ne règle rien (vitesse 9,8 m/s même à ×4) et éloigne les
+    cibles (bruit transverse r·σ_θ plus fort) : dans une zone bornée, on ne peut pas allonger les séquences sans
+    changer la distribution. Les méthodes restent comparables entre elles sur ce jeu, mais une RMSE plus faible
+    qu'en nominal ne prouve pas que la durée aide : les cibles y sont plus lentes et plus proches.
     """
     if kind == "strong_turns":
         return replace(params, turn_probability=1.0, turn_rate_range=(0.06, 0.10), turn_steps_range=(10, 20))

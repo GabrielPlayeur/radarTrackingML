@@ -11,8 +11,11 @@ il apprend à pondérer l'innovation à partir de ce qu'il observe (innovations,
 - une seule couche GRU précédée d'une projection linéaire ;
 - un a priori de gain de type alpha-bêta (a = 0,2, b = 0,03, choisis sur le jeu de validation) et un gain **borné**
   par construction, K̃ = bas + (haut − bas)·sigmoïde(sortie + logit(a priori)) : le réseau part d'un filtre stable
-  et ne peut pas en sortir. Sans borne, une perturbation de 0,03 sur les poids de la tête suffit à faire diverger
-  l'état (10¹⁴ m), donc à produire des NaN à l'entraînement. Les bornes restent dans la zone de stabilité alpha-bêta.
+  et ses gains restent dans un domaine borné. Sans borne, une perturbation de 0,03 sur les poids de la tête suffit à
+  faire diverger l'état (10¹⁴ m), donc à produire des NaN à l'entraînement. Les bornes diagonales (α ≤ 0,9, β ≤ 0,2)
+  sont dans la zone de stabilité d'un filtre alpha-bêta à gain constant (0 < α < 2, 0 < β < 4 − 2α). Ce n'est pas
+  une preuve de stabilité : le gain varie d'un pas à l'autre et a des termes croisés, et un système dont chaque
+  gain figé serait stable peut quand même diverger. En pratique, les bornes suffisent à éviter les divergences.
 """
 
 from dataclasses import dataclass

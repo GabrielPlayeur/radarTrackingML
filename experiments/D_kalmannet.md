@@ -44,6 +44,12 @@ Quatre conditions de test ; tous les filtres gardent leurs réglages nominaux da
 **nominal** (distribution d'entraînement), **virages 3 à 4 fois plus forts** (0,06–0,10 rad/s), **bruit de mesure ×2**,
 **séquences 4 fois plus longues**. C'est la section « quand ça ne marche pas ».
 
+Biais de la condition « séquences ×4 » : la zone de 20 km est la même, et le tirage par rejet (le navire doit y rester toute
+la séquence) écarte surtout les navires rapides. Vitesse initiale moyenne 8,9 m/s au lieu de 10,0, part au-dessus de 12 m/s
+divisée par 2, distance moyenne au radar 6,4 km au lieu de 7,2. Les méthodes restent comparables entre elles sur ce jeu, mais
+sa RMSE plus faible qu'en nominal ne vient pas seulement de la durée : les cibles y sont plus lentes et plus proches (bruit
+transverse r·σ_θ plus faible). Agrandir la zone ne corrige pas le biais de vitesse (9,8 m/s même à ×4) et éloigne les cibles.
+
 ## Références à battre (jeu de test, 300 trajectoires, IC 95 % par bootstrap)
 
 RMSE de position [m] :
