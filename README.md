@@ -1,127 +1,42 @@
 # Pistage radar maritime : quelles briques d'un filtre de Kalman l'IA peut-elle améliorer ?
 
 > **Projet en cours.**
-> C'est un support d'apprentissage (radar, filtrage de Kalman, pistage), pas un produit :
-> le code est écrit pour être lu et compris, et n'a aucune prétention opérationnelle.
 
 ## Objectif
 
-Construire pas à pas une chaîne de pistage radar maritime, avec tout le filtrage codé à la main
-(sans bibliothèque de filtrage dans `src/`), puis mesurer honnêtement ce qu'une brique d'IA
-apporte, ou non, par rapport à un EKF et à un IMM.
+Construire pas à pas une chaîne de pistage radar maritime, avec tout le filtrage codé à la main (sans bibliothèque de filtrage dans `src/`), puis mesurer ce qu'une brique d'IA apporte, ou non, par rapport à un EKF et à un IMM.
 
-## État d'avancement
+## Résultats
 
-| Jalon | Contenu | État |
-|---|---|---|
-| S0 | Bases radar + Kalman | en cours |
-| A | Kalman / EKF, une cible | terminé |
-| B | Chaîne signal : chirp → distance-Doppler → CFAR | terminé |
-| C | Multi-cibles : GNN + clutter + IMM + OSPA | terminé |
-| D | Une expérience IA (gain appris ou R adaptatif) | à faire |
+Chaque jalon est détaillé dans [experiments/](experiments/) (montage, validations, tableaux, toutes les figures, commandes pour reproduire).
 
-Les résultats et figures seront ajoutés ici (figures dans `figures/`) à la fin de chaque jalon.
+### A — Kalman / EKF, une cible · [détails](experiments/A_kalman_ekf.md)
 
-## Jalon A — Kalman / EKF, une cible
-
-KF linéaire et EKF à mesures polaires (r, θ) codés à la main (`src/tracking/kf.py`, `ekf.py`),
-trajectoires CV / virage (`src/sim/trajectories.py`), NEES / NIS (`src/metrics/nees.py`).
-Notebook : [notebooks/A_ekf.ipynb](notebooks/A_ekf.ipynb).
-
-**Validations (tests dans `tests/`)**
-
-| Vérification | Résultat |
-|---|---|
-| KF vs `filterpy.kalman.KalmanFilter` (x, P, innovation, S) | identiques à 1e-9 |
-| RMSE du filtre vs RMSE des mesures (CV, Q et R corrects) | 13 m contre 42 m |
-| Jacobienne analytique de h vs différences finies | accord à 1e-6 (rel.) |
-| Cible traversant θ = ±π | innovation max 0,03 rad avec normalisation (6,28 rad sans) |
-| NEES moyen, 100 Monte-Carlo, CV, Q correct | EKF : 3,96 pour 4 attendu, IC χ² 95 % : [3,46 ; 4,57] ; le KF est aussi dans l'IC (test) |
-| NIS moyen, même scénario | 1,95 pour 2 attendu, IC : [1,63 ; 2,41] |
-
-**Figure 1 — l'EKF décroche en virage avec un modèle CV.** Un Q 100 fois plus grand l'en empêche, mais bruite la ligne droite.
-
-![Trajectoire et erreur de position](figures/A_trajectoire.png)
-
-**Figure 2 — cohérence.** Dans la bande χ² quand le modèle est juste ; NEES ≈ 260 en virage ; un Q trop petit se voit à peine dans le NIS.
-
-![NEES et NIS](figures/A_nees.png)
-
-**Figure 3 — Q faux.** Q correct : 21 m en ligne droite mais 130 m en virage ; Q × 100 : 30 m en virage mais 29 m en ligne droite. Un Q fixe est un compromis, ce qui motive l'IMM (jalon C) et les approches apprises (jalon D).
+- KF et EKF polaire codés à la main ; le KF est identique à `filterpy` à 1e-9 et l'EKF est **honnête** : NEES moyen 3,96 pour 4 attendu (IC χ² 95 % : 3,46 à 4,57).
+- Avec un modèle CV dans un virage, l'EKF décroche : 130 m d'erreur contre 21 m en ligne droite, NEES ≈ 260.
+- Un Q fixe est un compromis : Q × 100 ramène le virage à 30 m mais coûte 37 % en ligne droite. C'est la motivation de l'IMM et des approches apprises.
 
 ![RMSE en fonction du facteur d'erreur sur Q](figures/A_rmse_vs_q.png)
 
-## Jalon B — Chaîne signal : chirp → distance-Doppler → CFAR
+### B — Chaîne signal : chirp → distance-Doppler → CFAR · [détails](experiments/B_chaine_signal.md)
 
-Un radar en simulation est un tableau complexe (N impulsions × n échantillons) en bande de base :
-`src/radar/waveform.py` (chirp, `RadarParams`), `simulate.py` (CPI avec retard analytique et bruit au SNR voulu),
-`processing.py` (compression d'impulsion, FFT Doppler fenêtrée, CA-CFAR 2D).
-Notebook : [notebooks/B_range_doppler.ipynb](notebooks/B_range_doppler.ipynb).
-
-**Validations (tests dans `tests/`)**
-
-| Vérification | Théorie | Mesuré |
-|---|---|---|
-| Largeur à −3 dB de l'autocorrélation du chirp | 0,886 / B | 0,884 / B (10 MHz), 0,885 / B (20 MHz) |
-| Position du pic (cible à 3 km, 5 m/s) | case distance et Doppler attendues | distance à 2,5 m (pas de 7,5 m), vitesse à 0,02 m/s |
-| Gain de compression d'impulsion | T·fs = 200 (23 dB) | 199,8 |
-| Gain Doppler, fenêtre de Hann | (Σw)² / Σw² ≈ 42 | 41,5 (−1,3 %) |
-| Pfa du CA-CFAR sur bruit seul | visée 10⁻³ / 10⁻⁴ | 1,35 × / 1,57 × la visée (critère : facteur 2) |
-| Courbe Pd(SNR), Pfa = 10⁻⁴, 200 tirages | seuil de Pd = 0,5 à −29,7 dB | −29,1 dB (+0,6 dB) ; Pd = 0,9 : +0,8 dB |
-
-Le gain de compression vaut T·fs et non B·T, parce que fs = 2B. La Pfa du CFAR est au-dessus de la visée : les cases voisines sont corrélées.
-
-**Figure 4 — carte distance-Doppler (dB) et détections CA-CFAR.** Deux cibles invisibles dans le signal brut (−15 dB par échantillon) ressortent à 24 et 17 dB ; les cercles isolés sont des fausses alarmes attendues.
+- Chaque étage est validé contre la théorie : largeur du pic 0,884/B (théorie 0,886/B), gain de compression 199,8 (T·fs = 200, et non B·T car fs = 2B), gain Doppler 41,5 (Hann).
+- CA-CFAR : Pfa mesurée 1,35 à 1,67 fois la visée (cellules voisines corrélées) ; courbe Pd(SNR) à 0,6–0,8 dB de la théorie.
 
 ![Carte distance-Doppler et détections CFAR](figures/B_range_doppler.png)
 
-**Figure 5 — Pd en fonction du SNR**, avec intervalle de Clopper-Pearson à 95 % et courbe théorique (cible sur la case, seuil du CA-CFAR).
+### C — Multi-cibles : GNN + clutter + IMM + OSPA · [détails](experiments/C_multi_cibles_imm.md)
 
-![Pd en fonction du SNR](figures/B_pd_vs_snr.png)
-
-## Jalon C — Multi-cibles maritime : GNN + clutter + IMM + OSPA
-
-Le pistage travaille sur des détections (r, θ), pas sur le signal. Scénarios de 10 navires (CV / virages) dans une zone de
-20 km × 20 km, Pd = 0,9, ~10 fausses alarmes de Poisson par balayage (`src/sim/scenario.py`, sérialisables et rejouables).
-Chaîne : gating de Mahalanobis + association hongroise (`gnn.py`), confirmation M/N 3 sur 4 et suppression après 5 ratés
-(`track_manager.py`), IMM (`imm.py`), OSPA et statistiques de pistes (`src/metrics/`).
-Notebook : [notebooks/C_multitarget.ipynb](notebooks/C_multitarget.ipynb).
-
-**Validations (tests dans `tests/`)**
-
-| Vérification | Résultat |
-|---|---|
-| IMM vs `filterpy.kalman.IMMEstimator` (x, P, probabilités de modèle, 1 cible) | identiques à 1e-8 |
-| Association hongroise vs force brute (200 petits problèmes) | optimum identique |
-| OSPA : deux ensembles identiques / un vide contre un non vide | 0 / c (exactement) |
-| Pd empirique des scénarios, fausses alarmes par balayage | 0,9 ± 0,02 ; moyenne = variance = λ (Poisson) |
-| Une cible, virage, 40 tirages : erreur de l'IMM à 3 modèles / de l'EKF-CV | < 0,5 (mesuré ≈ 0,15) |
-| NEES moyen en virage, IMM / EKF-CV | 4,0 (dans l'IC χ²) / ≈ 520 |
-
-**Tableau — scénario « manœuvres »** (tous les navires virent), 50 Monte-Carlo, moyenne ± IC de Student à 95 % ; OSPA avec c = 300 m, p = 2.
-
-| pisteur | OSPA moyen [m] | RMSE [m] | RMSE en virage [m] | pertes de piste | changements d'identité | fausses pistes |
-|---|---|---|---|---|---|---|
-| EKF-CV | 57.7 ± 1.8 | 45.3 ± 1.7 | 61.7 ± 2.4 | 0.30 ± 0.14 | 11.1 ± 0.7 | 0.56 ± 0.19 |
-| IMM (CV + CT) | 49.0 ± 2.0 | 38.8 ± 1.7 | 48.1 ± 2.5 | 0.14 ± 0.10 | 5.6 ± 0.7 | 0.62 ± 0.19 |
-| IMM (CV + CT±) | 38.8 ± 1.5 | 31.4 ± 0.9 | 32.9 ± 1.4 | 0.06 ± 0.07 | 1.3 ± 0.6 | 0.50 ± 0.18 |
-
-Témoin « ligne droite » (aucun virage) : l'IMM est légèrement moins bon que l'EKF-CV (RMSE 29,4 ± 0,7 m contre 27,7 ± 0,7 m).
-Temps par mise à jour (médiane sur 8 scénarios) : EKF-CV 455 µs, IMM à 2 modèles 1 304 µs, IMM à 3 modèles 1 708 µs.
-
-Le modèle CT d'un IMM a un taux de virage signé : l'IMM « CV + CT » à 2 modèles ne gagne que dans le sens de son CT (figure 8). L'IMM à 3 modèles (CV, CT+, CT−) divise l'erreur en virage par ≈ 1,9 dans les deux sens.
-
-**Figure 6 — un scénario et les pistes de l'IMM.**
-
-![Scénario multi-cibles et pistes](figures/C_scenario.png)
-
-**Figure 7 — OSPA au cours du temps** (50 Monte-Carlo, IC à 95 %).
+- Pisteur complet (gating de Mahalanobis, association hongroise, confirmation M/N) sur 10 navires, Pd = 0,9, ~10 fausses alarmes par balayage ; 50 Monte-Carlo.
+- L'IMM à 3 modèles (CV, CT+, CT−) divise l'erreur en virage par ≈ 1,9 (32,9 m contre 61,7 m), l'OSPA passe de 57,7 à 38,8 m et les changements d'identité de 11,1 à 1,3 par scénario.
+- L'IMM à 2 modèles ne gagne que dans le sens de virage de son CT ; en ligne droite l'IMM perd ≈ 6 % ; son temps par mise à jour est ×3 à ×4.
 
 ![OSPA au cours du temps](figures/C_ospa.png)
 
-**Figure 8 — erreur en virage selon le sens du virage.**
+### D — Gain de Kalman appris (KalmanNet) · [détails](experiments/D_kalmannet.md)
 
-![Erreur en virage par sens de virage](figures/C_virage_par_sens.png)
+- **En cours : code et tests prêts, entraînement à lancer, pas encore de résultat pour KalmanNet.** Réseau de 19 592 paramètres, gain borné autour d'un a priori alpha-bêta.
+- Références à battre sur le jeu de test (RMSE globale) : IMM 28,2 ± 0,9 m, gain fixe non appris 35,1 ± 1,1 m, EKF-CV 59,5 ± 5,7 m.
 
 ## Structure
 
@@ -133,9 +48,10 @@ src/
 ├── learned/    # kalmannet, R adaptatif
 └── metrics/    # rmse, ospa, nees
 notebooks/      # un notebook par jalon
+experiments/    # détails de chaque jalon (montage, validations, tableaux, figures), un .md par jalon
 tests/          # validations théoriques (pytest)
 cpp/            # jalon G (optionnel)
-figures/        # figures générées pour ce README
+figures/        # figures générées par les notebooks
 ```
 
 ## Installation
