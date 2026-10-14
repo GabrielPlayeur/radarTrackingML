@@ -96,6 +96,30 @@ def test_cfar_empirical_pfa_matches_target_within_factor_2(pfa):
     assert pfa / 2 <= empirical <= 2 * pfa, f"Pfa visée {pfa}, mesurée {empirical:.2e}"
 
 
+def test_cfar_pfa_excess_comes_from_correlated_cells():
+    """La formule α = n(Pfa^(−1/n) − 1) suppose des cellules de référence indépendantes.
+
+    Avec fs = B et une fenêtre rectangulaire, les cases sont indépendantes : la Pfa mesurée tombe sur la visée.
+    Avec fs = 2B et Hann (réglage par défaut), les cases voisines sont corrélées, le bruit de référence est moins
+    bien moyenné et la Pfa dépasse nettement la visée : c'est la cause de l'excès, pas une erreur de seuil.
+    """
+    pfa = 1e-3
+
+    def measured(oversampling, window):
+        params = RadarParams(oversampling=oversampling, n_fast=int(2000 * oversampling))
+        rng = np.random.default_rng(7)
+        n_alarms = n_cells = 0
+        for _ in range(6):
+            rd = range_doppler_map(simulate_cpi(params, [], snr_db=0.0, rng=rng), params, window)
+            detections = ca_cfar_2d(np.abs(rd) ** 2, pfa)
+            n_alarms += detections.sum()
+            n_cells += detections.size
+        return n_alarms / n_cells / pfa
+
+    assert measured(1.0, "rect") == pytest.approx(1.0, abs=0.12)
+    assert measured(2.0, "hann") > 1.2
+
+
 def test_cfar_detects_target_and_stays_quiet_far_from_it():
     """Une cible forte est détectée ; aucune détection loin de sa case (hors lobes secondaires)."""
     target = Target(3_000.0, 5.0)

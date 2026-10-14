@@ -29,9 +29,20 @@ exp(−j2π·fc·τ), plus du bruit complexe gaussien.
 | Pfa du CA-CFAR sur bruit seul | visée 10⁻³ / 10⁻⁴ | 1,35 × / 1,57 × la visée (critère : facteur 2) |
 | Courbe Pd(SNR), Pfa = 10⁻⁴, 200 tirages | seuil de Pd = 0,5 à −29,7 dB | −29,1 dB (+0,6 dB) ; Pd = 0,9 : +0,8 dB |
 
-Le gain de compression vaut **T·fs** et non B·T (tableau du ROADMAP), parce que fs = 2B. La Pfa du CFAR est au-dessus de la visée :
-explication la plus probable (non isolée par une expérience dédiée), les cases voisines sont corrélées (suréchantillonnage fs = 2B,
-fenêtre de Hann), donc le bruit de référence est moins bien moyenné que si les cellules étaient indépendantes.
+Le gain de compression vaut **T·fs** et non B·T (tableau du ROADMAP), parce que fs = 2B. La Pfa du CFAR est au-dessus de la visée
+parce que les cases voisines sont corrélées (suréchantillonnage fs = 2B, fenêtre de Hann) : le seuil α = n(Pfa^(−1/n) − 1) suppose
+n cellules de référence indépendantes, et des cellules corrélées moyennent moins bien le bruit. Expérience dédiée (bruit seul,
+Pfa = 10⁻⁴, 30 CPI) :
+
+| fs | fenêtre Doppler | Pfa mesurée / visée |
+|---|---|---|
+| 2B | Hann (réglage par défaut) | 1,65 |
+| 2B | rectangulaire | 1,24 |
+| B | Hann | 1,16 |
+| B | rectangulaire (cases indépendantes) | 1,02 |
+
+Avec des cases indépendantes, la Pfa tombe sur la visée : le seuil est juste, l'excès vient de la corrélation
+(test `test_cfar_pfa_excess_comes_from_correlated_cells`).
 
 ## Figure 4 — carte distance-Doppler (dB) et détections CA-CFAR
 

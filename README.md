@@ -21,7 +21,7 @@ Chaque jalon est détaillé dans [experiments/](experiments/) (montage, validati
 ### B — Chaîne signal : chirp → distance-Doppler → CFAR · [détails](experiments/B_chaine_signal.md)
 
 - Chaque étage est validé contre la théorie : largeur du pic 0,884/B (théorie 0,886/B), gain de compression 199,8 (T·fs = 200, et non B·T car fs = 2B), gain Doppler 41,5 (Hann).
-- CA-CFAR : Pfa mesurée 1,35 à 1,67 fois la visée (cellules voisines corrélées) ; courbe Pd(SNR) à 0,6–0,8 dB de la théorie.
+- CA-CFAR : Pfa mesurée 1,35 à 1,67 fois la visée, à cause des cellules voisines corrélées (fs = 2B, Hann) : avec des cases indépendantes, elle retombe à 1,02 fois la visée ; courbe Pd(SNR) à 0,6–0,8 dB de la théorie.
 
 ![Carte distance-Doppler et détections CFAR](figures/B_range_doppler.png)
 
