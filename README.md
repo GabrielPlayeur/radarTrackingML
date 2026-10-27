@@ -35,8 +35,11 @@ Chaque jalon est détaillé dans [experiments/](experiments/) (montage, validati
 
 ### D — Gain de Kalman appris (KalmanNet) · [détails](experiments/D_kalmannet.md)
 
-- **En cours : code et tests prêts, entraînement à lancer, pas encore de résultat pour KalmanNet.** Réseau de 19 592 paramètres, gain borné autour d'un a priori alpha-bêta.
-- Références à battre sur le jeu de test (RMSE globale) : IMM 28,2 ± 0,9 m, gain fixe non appris 35,1 ± 1,1 m, EKF-CV 59,5 ± 5,7 m.
+- Un GRU de 19 592 paramètres remplace le calcul du gain d'un filtre CV (gain borné autour d'un a priori alpha-bêta), 3 graines d'entraînement, 300 trajectoires de test par condition.
+- **Résultat négatif** : KalmanNet ne bat pas l'IMM en virage (43,6 m contre 33,5 m). L'apprentissage ne paie qu'en ligne droite (27,5 m, au niveau de l'IMM, contre 34,3 m pour le même gain non appris) : avec 12 % des pas en virage, la perte pousse le réseau à lisser.
+- Hors distribution, sur des virages 3 à 4 fois plus forts, il bat largement l'IMM (44,7 contre 64,3 m, modèles CT désaccordés), mais un gain fixe non appris fait mieux (41,7 m). Coût par mise à jour : ×1,3 l'IMM, ×11 l'EKF.
+
+![RMSE globale par condition et par méthode](figures/D_comparaison.png)
 
 ## Structure
 

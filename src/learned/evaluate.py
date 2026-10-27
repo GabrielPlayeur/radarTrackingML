@@ -230,6 +230,7 @@ def plot_figure(results: dict, path: str) -> None:
     methods = [m for m in colors if m in results["nominal"]]
     fig, ax = plt.subplots(figsize=(10, 4.8))
     width = 0.8 / len(methods)
+    top = 0.0
     for i, name in enumerate(methods):
         x = np.arange(len(CONDITIONS)) + (i - (len(methods) - 1) / 2) * width
         values = [results[c][name]["global"]["rmse"] for c in CONDITIONS]
@@ -237,6 +238,8 @@ def plot_figure(results: dict, path: str) -> None:
         ax.bar(x, values, width * 0.9, color=colors[name], label=name, yerr=errors, error_kw={"ecolor": "#52514e", "lw": 1})
         for xi, v, e in zip(x, values, errors):
             ax.text(xi, v + e + 1, f"{v:.0f}", ha="center", color="#52514e", fontsize=8)
+            top = max(top, v + e)
+    ax.set_ylim(0, 1.2 * top)  # place pour la légende au-dessus de la plus haute barre
     ax.set_xticks(np.arange(len(CONDITIONS)), list(CONDITIONS.values()), fontsize=9)
     ax.set_ylabel("RMSE de position [m]")
     ax.set_title("KalmanNet, EKF-CV, IMM et gain fixe : RMSE globale par condition", loc="left")
