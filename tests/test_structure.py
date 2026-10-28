@@ -1,4 +1,4 @@
-"""Test de fumée : les cinq sous-paquets de src/ sont importables (structure du ROADMAP)."""
+"""Test de fumée : les cinq sous-paquets de src/ sont importables (structure décrite dans le README)."""
 
 import importlib
 

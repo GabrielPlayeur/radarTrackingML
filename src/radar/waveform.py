@@ -14,7 +14,7 @@ class RadarParams:
     """Paramètres d'un radar impulsionnel à compression d'impulsion (bande X par défaut).
 
     Les grandeurs dérivées (résolutions, ambiguïtés, gains) sont des propriétés : elles
-    reprennent le tableau « formules à connaître » du ROADMAP.
+    reprennent le tableau « formules à connaître » du radar impulsionnel.
     """
 
     c: float = 3e8  # vitesse de la lumière [m/s]

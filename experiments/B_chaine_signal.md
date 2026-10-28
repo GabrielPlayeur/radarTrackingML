@@ -29,7 +29,7 @@ exp(−j2π·fc·τ), plus du bruit complexe gaussien.
 | Pfa du CA-CFAR sur bruit seul | visée 10⁻³ / 10⁻⁴ | 1,35 × / 1,57 × la visée (critère : facteur 2) |
 | Courbe Pd(SNR), Pfa = 10⁻⁴, 200 tirages | seuil de Pd = 0,5 à −29,7 dB | −29,1 dB (+0,6 dB) ; Pd = 0,9 : +0,8 dB |
 
-Le gain de compression vaut **T·fs** et non B·T (tableau du ROADMAP), parce que fs = 2B. La Pfa du CFAR est au-dessus de la visée
+Le gain de compression vaut **T·fs** et non B·T (la formule usuelle suppose fs = B), parce que fs = 2B. La Pfa du CFAR est au-dessus de la visée
 parce que les cases voisines sont corrélées (suréchantillonnage fs = 2B, fenêtre de Hann) : le seuil α = n(Pfa^(−1/n) − 1) suppose
 n cellules de référence indépendantes, et des cellules corrélées moyennent moins bien le bruit. Expérience dédiée (bruit seul,
 Pfa = 10⁻⁴, 30 CPI) :

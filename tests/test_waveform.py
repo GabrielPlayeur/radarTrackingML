@@ -43,8 +43,8 @@ def test_reference_chirp_rejects_too_short_window():
         reference_chirp(dataclasses.replace(RadarParams(), n_fast=100))
 
 
-def test_roadmap_formula_table_in_X_band():
-    """Le tableau « formules à connaître » du ROADMAP (B = 10 MHz, PRF = 1 kHz, N = 64)."""
+def test_formula_table_in_X_band():
+    """Le tableau « formules à connaître » en bande X (B = 10 MHz, PRF = 1 kHz, N = 64)."""
     p = RadarParams()
     assert p.wavelength == pytest.approx(0.032, rel=0.01)
     assert p.range_resolution == pytest.approx(15.0)
